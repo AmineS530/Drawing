@@ -2,29 +2,29 @@ use rand::Rng;
 use raster::{Color, Image};
 
 /* Types declarations */
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Point(pub i32, pub i32);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Line {
     pub first_p: Point,
     pub sec_p: Point,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Triangle {
     pub first_p: Point,
     pub sec_p: Point,
     pub third_p: Point,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Rectangle {
-   pub first_p: Point,
-   pub sec_p: Point,
+    pub first_p: Point,
+    pub sec_p: Point,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Circle {
     pub center: Point,
     pub radius: i32,
@@ -32,17 +32,15 @@ pub struct Circle {
 
 /* Traits */
 pub trait Drawable {
+    fn draw(&self, image: &mut Image);
 
-    fn draw(&self, image: &mut raster::Image);
-
-    fn color(&self) -> raster::Color {
-        raster::Color::black()
+    fn color(&self) -> Color {
+        Color::black()
     }
-    
 }
 
 pub trait Displayable {
-    fn display(&mut self, x: i32, y: i32, color: raster::Color);
+    fn display(&mut self, x: i32, y: i32, color: Color);
 }
 
 /* Implementations */
@@ -55,7 +53,6 @@ impl Point {
 
     // Create a random point in a given width and height
     pub fn random(width: i32, height: i32) -> Point {
-
         let mut rng = rand::thread_rng();
         let x = rng.gen_range(0..width);
         let y = rng.gen_range(0..height);
@@ -65,10 +62,10 @@ impl Point {
 }
 
 impl Drawable for Point {
-    fn draw(&self, image: &mut raster::Image) {
+    fn draw(&self, image: &mut Image) {
         let color = self.color();
         if self.0 >= 0 && self.0 < image.width && self.1 >= 0 && self.1 < image.height {
-            image.set_pixel(self.0, self.1, color).unwrap();
+            image.display(self.0, self.1, color);
         }
     }
 
@@ -77,19 +74,12 @@ impl Drawable for Point {
     }
 }
 
-impl Displayable for Point {
-    fn display(&mut self, x: i32, y: i32, color: Color) {
-        self.0 = x;
-        self.1 = y;
-    }
-}
-
 impl Line {
     // Create a new line from two points
     pub fn new(a: &Point, b: &Point) -> Line {
-        Line { 
-            first_p: a.clone(), 
-            sec_p: b.clone() 
+        Line {
+            first_p: a.clone(),
+            sec_p: b.clone(),
         }
     }
 
@@ -102,7 +92,7 @@ impl Line {
 }
 
 impl Drawable for Line {
-    fn draw(&self, image: &mut raster::Image) {
+    fn draw(&self, image: &mut Image) {
         let color = self.color();
 
         let mut x0 = self.first_p.0;
@@ -118,7 +108,7 @@ impl Drawable for Line {
 
         loop {
             if x0 >= 0 && x0 < image.width && y0 >= 0 && y0 < image.height {
-                image.set_pixel(x0, y0, color.clone()).unwrap();
+                image.display(x0, y0, color.clone());
             }
             if x0 == x1 && y0 == y1 {
                 break;
@@ -136,33 +126,22 @@ impl Drawable for Line {
     }
 
     fn color(&self) -> Color {
-        Color::rgb(0, 0, 255) // blue
-    }
-}
-
-impl Displayable for Line {
-    fn display(&mut self, x: i32, y: i32, color: Color) {
-
-        self.first_p.0 = x;
-        self.first_p.1 = y;
-        self.sec_p.0 = x + 1;
-        self.sec_p.1 = y + 1;
-
+        Color::white()
     }
 }
 
 impl Triangle {
     pub fn new(a: &Point, b: &Point, c: &Point) -> Triangle {
-        Triangle { 
-            first_p: a.clone(), 
-            sec_p: b.clone(), 
-            third_p: c.clone() 
+        Triangle {
+            first_p: a.clone(),
+            sec_p: b.clone(),
+            third_p: c.clone(),
         }
     }
 }
 
 impl Drawable for Triangle {
-    fn draw(&self, image: &mut raster::Image) {
+    fn draw(&self, image: &mut Image) {
         let line1 = Line::new(&self.first_p, &self.sec_p);
         let line2 = Line::new(&self.sec_p, &self.third_p);
         let line3 = Line::new(&self.third_p, &self.first_p);
@@ -177,18 +156,6 @@ impl Drawable for Triangle {
     }
 }
 
-impl Displayable for Triangle {
-    fn display(&mut self, x: i32, y: i32, color: Color) {
-        self.first_p.0 = x;
-        self.first_p.1 = y;
-        self.sec_p.0 = x + 1;
-        self.sec_p.1 = y + 1;
-        self.third_p.0 = x + 2;
-        self.third_p.1 = y + 2;
-    }
-}
-
-
 // Remove the dashes _ when you work on something
 impl Circle {
     pub fn new(center: Point, radius: i32) -> Self {
@@ -197,18 +164,20 @@ impl Circle {
 
     pub fn random(width: i32, height: i32) -> Self {
         let mut rng = rand::thread_rng();
-        Self::new(Point::random(width, height), rng.gen_range(0..width.min(height) / 2))
+        Self::new(
+            Point::random(width, height),
+            rng.gen_range(0..width.min(height) / 2),
+        )
     }
 }
 
-
 impl Drawable for Circle {
-    fn draw(&self, image: &mut raster::Image) {
+    fn draw(&self, image: &mut Image) {
         let cx = self.center.0;
         let cy = self.center.1;
         let r = self.radius;
         let color = self.color();
-        
+
         // Using Bresenham's circle algorithm
         let mut x = 0;
         let mut y = r;
@@ -217,28 +186,28 @@ impl Drawable for Circle {
         while y >= x {
             // Draw eight symmetric points
             if cx + x >= 0 && cx + x < image.width && cy + y >= 0 && cy + y < image.height {
-                image.set_pixel(cx + x, cy + y, color.clone()).unwrap();
+                image.display(cx + x, cy + y, color.clone());
             }
             if cx + x >= 0 && cx + x < image.width && cy - y >= 0 && cy - y < image.height {
-                image.set_pixel(cx + x, cy - y, color.clone()).unwrap();
+                image.display(cx + x, cy - y, color.clone());
             }
             if cx - x >= 0 && cx - x < image.width && cy + y >= 0 && cy + y < image.height {
-                image.set_pixel(cx - x, cy + y, color.clone()).unwrap();
+                image.display(cx - x, cy + y, color.clone());
             }
             if cx - x >= 0 && cx - x < image.width && cy - y >= 0 && cy - y < image.height {
-                image.set_pixel(cx - x, cy - y, color.clone()).unwrap();
+                image.display(cx - x, cy - y, color.clone());
             }
             if cx + y >= 0 && cx + y < image.width && cy + x >= 0 && cy + x < image.height {
-                image.set_pixel(cx + y, cy + x, color.clone()).unwrap();
+                image.display(cx + y, cy + x, color.clone());
             }
             if cx + y >= 0 && cx + y < image.width && cy - x >= 0 && cy - x < image.height {
-                image.set_pixel(cx + y, cy - x, color.clone()).unwrap();
+                image.display(cx + y, cy - x, color.clone());
             }
             if cx - y >= 0 && cx - y < image.width && cy + x >= 0 && cy + x < image.height {
-                image.set_pixel(cx - y, cy + x, color.clone()).unwrap();
+                image.display(cx - y, cy + x, color.clone());
             }
             if cx - y >= 0 && cx - y < image.width && cy - x >= 0 && cy - x < image.height {
-                image.set_pixel(cx - y, cy - x, color.clone()).unwrap();
+                image.display(cx - y, cy - x, color.clone());
             }
 
             if d <= 0 {
@@ -262,23 +231,30 @@ impl Drawable for Circle {
     }
 }
 
-
-impl Displayable for Circle {
-    fn display(&mut self, x: i32, y: i32, _color: Color) {
-        self.center.0 = x;
-        self.center.1 = y;
+impl Rectangle {
+    pub fn new(a: &Point, b: &Point) -> Self {
+        Rectangle {
+            first_p: a.clone(),
+            sec_p: b.clone(),
+        }
     }
 }
-/*
-
-impl Rectangle {
-    pub fn new(_a:Point,_b:Point){}
-}
-
 
 impl Drawable for Rectangle {
-    fn draw(&self, _image: &mut raster::Image) {}
-}
+    fn draw(&self, image: &mut Image) {
+        let a = Point::new(self.first_p.0, self.first_p.1);
+        let b = Point::new(self.sec_p.0, self.first_p.1);
+        let c = Point::new(self.sec_p.0, self.sec_p.1);
+        let d = Point::new(self.first_p.0, self.sec_p.1);
 
-impl Displayable for Rectangle {}
-*/
+        let points = [&a, &b, &c, &d];
+        for i in 0..points.len() {
+            let start = points[i];
+            let end = points[(i + 1) % points.len()];
+            Line::new(start, end).draw(image);
+        }
+    }
+    fn color(&self) -> Color {
+        Color::white()
+    }
+}
