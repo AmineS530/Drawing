@@ -20,9 +20,12 @@ fn main() {
         &gs::Point::new(700, 800),
     );
     triangle.draw(&mut image);
-
     for _ in 1..50 {
         gs::Circle::random(image.width, image.height).draw(&mut image);
+    }
+    
+    for _ in 0..3 {
+        gs::Pentagon::random(image.width, image.height).draw(&mut image);
     }
 
     raster::save(&image, "image.png").unwrap();

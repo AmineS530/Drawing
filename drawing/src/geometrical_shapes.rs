@@ -1,100 +1,99 @@
 use rand::Rng;
 use raster::{Color, Image};
+use std::sync::Mutex;
 
-/* Types declarations */
-#[derive(Clone, Debug)]
-pub struct Point(pub i32, pub i32);
 
-#[derive(Clone, Debug)]
-pub struct Line {
-    pub first_p: Point,
-    pub sec_p: Point,
-}
-
-#[derive(Clone, Debug)]
-pub struct Triangle {
-    pub first_p: Point,
-    pub sec_p: Point,
-    pub third_p: Point,
-}
-
-#[derive(Clone, Debug)]
-pub struct Rectangle {
-    pub first_p: Point,
-    pub sec_p: Point,
-}
-
-#[derive(Clone, Debug)]
-pub struct Circle {
-    pub center: Point,
-    pub radius: i32,
-}
+// for no duplicate colors
+static USED_COLORS: Mutex<Vec<Color>> = Mutex::new(Vec::new()); // Mutex to protect access to used colors
 
 /* Traits */
 pub trait Drawable {
-    fn draw(&self, image: &mut Image);
+    fn draw(&self, image: &mut raster::Image);
 
-    fn color(&self) -> Color {
-        Color::black()
+    fn color() -> Color {
+        let mut rng = rand::thread_rng();
+
+        loop {
+            let r = rng.gen_range(0..=255);
+            let g = rng.gen_range(0..=255);
+            let b = rng.gen_range(0..=255);
+
+            let c = Color { r, g, b, a: 255 };
+
+            let mut used = USED_COLORS.lock().unwrap(); // accès protégé
+            if !used.iter().any(|col| col.r == c.r && col.g == c.g && col.b == c.b) {
+                used.push(c.clone());
+                return c;
+            }
+        }
     }
 }
-
 pub trait Displayable {
     fn display(&mut self, x: i32, y: i32, color: Color);
 }
 
 /* Implementations */
+/********************* Point ********************/
+#[derive(Clone, Debug)]
+pub struct Point(pub i32, pub i32); // point (x, y)
 
 impl Point {
     // Create a new point
-    pub fn new(a: i32, b: i32) -> Point {
-        Point(a, b)
+    pub fn new(a: i32, b: i32) -> Self {
+        Self(a, b)
     }
 
     // Create a random point in a given width and height
-    pub fn random(width: i32, height: i32) -> Point {
+    pub fn random(width: i32, height: i32) -> Self {
         let mut rng = rand::thread_rng();
         let x = rng.gen_range(0..width);
         let y = rng.gen_range(0..height);
 
-        Point(x, y)
+        Self(x, y)
     }
 }
 
 impl Drawable for Point {
     fn draw(&self, image: &mut Image) {
-        let color = self.color();
+        let color = Self::color();
         if self.0 >= 0 && self.0 < image.width && self.1 >= 0 && self.1 < image.height {
             image.display(self.0, self.1, color);
         }
     }
 
-    fn color(&self) -> Color {
-        Color::rgb(255, 0, 0)
-    }
+   
 }
+
+/********************* Line ********************/
+#[derive(Clone, Debug)]
+pub struct Line {            // line from point A to point B
+    pub first_p: Point,
+    pub sec_p: Point,
+    pub color: Color,
+}
+
 
 impl Line {
     // Create a new line from two points
-    pub fn new(a: &Point, b: &Point) -> Line {
-        Line {
+    pub fn new(a: &Point, b: &Point) -> Self {
+        Self {
             first_p: a.clone(),
             sec_p: b.clone(),
+            color: Self::color(),
         }
     }
 
     // Create a random line using two random points
-    pub fn random(width: i32, height: i32) -> Line {
+    pub fn random(width: i32, height: i32) -> Self {
         let p1 = Point::random(width, height);
         let p2 = Point::random(width, height);
-        Line::new(&p1, &p2)
+        Self::new(&p1, &p2)
     }
 }
 
 impl Drawable for Line {
     fn draw(&self, image: &mut Image) {
-        let color = self.color();
-
+        let color = self.color.clone();
         let mut x0 = self.first_p.0;
         let mut y0 = self.first_p.1;
         let x1 = self.sec_p.0;
@@ -125,41 +124,93 @@ impl Drawable for Line {
         }
     }
 
-    fn color(&self) -> Color {
-        Color::white()
-    }
+  
+}
+
+
+/********************* Triangle ********************/
+#[derive(Clone, Debug)]
+pub struct Triangle {
+    pub first_p: Point,
+    pub sec_p: Point,
+    pub third_p: Point,
+    pub color: Color,
 }
 
 impl Triangle {
-    pub fn new(a: &Point, b: &Point, c: &Point) -> Triangle {
-        Triangle {
+    pub fn new(a: &Point, b: &Point, c: &Point) -> Self {
+        Self {
             first_p: a.clone(),
             sec_p: b.clone(),
             third_p: c.clone(),
+            color: Self::color(),
         }
     }
 }
 
 impl Drawable for Triangle {
     fn draw(&self, image: &mut Image) {
-        let line1 = Line::new(&self.first_p, &self.sec_p);
-        let line2 = Line::new(&self.sec_p, &self.third_p);
-        let line3 = Line::new(&self.third_p, &self.first_p);
+        let mut line1 = Line::new(&self.first_p, &self.sec_p);
+        let mut line2 = Line::new(&self.sec_p, &self.third_p);
+        let mut line3 = Line::new(&self.third_p, &self.first_p);
 
+        line1.color = self.color.clone();
+        line2.color = self.color.clone();
+        line3.color = self.color.clone();
         line1.draw(image);
         line2.draw(image);
         line3.draw(image);
     }
 
-    fn color(&self) -> Color {
-        Color::rgb(0, 255, 0) // green
+}
+
+/********************* Rectangle ********************/
+#[derive(Clone, Debug)]
+pub struct Rectangle {
+    pub first_p: Point,
+    pub sec_p: Point,
+    pub color: Color,
+}
+
+impl Rectangle {
+    pub fn new(a: &Point, b: &Point) -> Self {
+        Self {
+            first_p: a.clone(),
+            sec_p: b.clone(),
+            color: Self::color(),
+        }
     }
 }
 
-// Remove the dashes _ when you work on something
+impl Drawable for Rectangle {
+    fn draw(&self, image: &mut Image) {
+        let a = Point::new(self.first_p.0, self.first_p.1);
+        let b = Point::new(self.sec_p.0, self.first_p.1);
+        let c = Point::new(self.sec_p.0, self.sec_p.1);
+        let d = Point::new(self.first_p.0, self.sec_p.1);
+
+        let points = [&a, &b, &c, &d];
+        for i in 0..points.len() {
+            let start = points[i];
+            let end = points[(i + 1) % points.len()];
+            let mut line = Line::new(start, end);
+            line.color = self.color.clone();
+            line.draw(image);
+        }
+    }
+}
+
+/********************* Circle ********************/
+#[derive(Clone, Debug)]
+pub struct Circle {
+    pub center: Point,
+    pub radius: i32,
+    pub color: Color,
+}
+
 impl Circle {
     pub fn new(center: Point, radius: i32) -> Self {
-        Self { center, radius }
+        Self { center, radius, color: Self::color() }
     }
 
     pub fn random(width: i32, height: i32) -> Self {
@@ -176,7 +227,7 @@ impl Drawable for Circle {
         let cx = self.center.0;
         let cy = self.center.1;
         let r = self.radius;
-        let color = self.color();
+        let color = self.color.clone();
 
         // Using Bresenham's circle algorithm
         let mut x = 0;
@@ -220,41 +271,55 @@ impl Drawable for Circle {
         }
     }
 
-    fn color(&self) -> Color {
+}
+
+/********************* Pentagon ********************/
+#[derive(Clone, Debug)]
+pub struct Pentagon {
+    pub center: Point,
+    pub radius: i32,
+    pub color: Color,
+}
+
+impl Pentagon {
+    pub fn new(center: Point, radius: i32) -> Self {
+        Self {
+            center,
+            radius,
+            color: Self::color(),
+        }
+    }
+
+    pub fn random(width: i32, height: i32) -> Self {
         let mut rng = rand::thread_rng();
-        Color {
-            r: rng.gen_range(0..=255),
-            g: rng.gen_range(0..=255),
-            b: rng.gen_range(0..=255),
-            a: rng.gen_range(100..=255),
-        }
+        Self::new(
+            Point::random(width, height),
+            rng.gen_range(50..width.min(height) / 6),
+        )
     }
 }
 
-impl Rectangle {
-    pub fn new(a: &Point, b: &Point) -> Self {
-        Rectangle {
-            first_p: a.clone(),
-            sec_p: b.clone(),
-        }
-    }
-}
-
-impl Drawable for Rectangle {
+impl Drawable for Pentagon {
     fn draw(&self, image: &mut Image) {
-        let a = Point::new(self.first_p.0, self.first_p.1);
-        let b = Point::new(self.sec_p.0, self.first_p.1);
-        let c = Point::new(self.sec_p.0, self.sec_p.1);
-        let d = Point::new(self.first_p.0, self.sec_p.1);
+        let center_x = self.center.0;
+        let center_y = self.center.1;
+        let radius = self.radius as f64;
+        let color = self.color.clone();
 
-        let points = [&a, &b, &c, &d];
-        for i in 0..points.len() {
-            let start = points[i];
-            let end = points[(i + 1) % points.len()];
-            Line::new(start, end).draw(image);
+        // Calculate pentagon points
+        let mut points = Vec::new();
+        for i in 0..5 {
+            let angle = (i as f64) * 2.0 * std::f64::consts::PI / 5.0 - std::f64::consts::PI / 2.0;
+            let x = (center_x as f64 + radius * angle.cos()) as i32;
+            let y = (center_y as f64 + radius * angle.sin()) as i32;
+            points.push(Point::new(x, y));
         }
-    }
-    fn color(&self) -> Color {
-        Color::white()
+
+        // Draw the pentagon using lines
+        for i in 0..5 {
+            let mut line = Line::new(&points[i], &points[(i + 1) % 5]);
+            line.color = color.clone();
+            line.draw(image);
+        }
     }
 }
