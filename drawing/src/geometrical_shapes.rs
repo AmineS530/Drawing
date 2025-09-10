@@ -190,23 +190,95 @@ impl Displayable for Triangle {
 
 
 // Remove the dashes _ when you work on something
-/*
 impl Circle {
-    pub fn random(_width:i32,_height:i32){}
+    pub fn new(center: Point, radius: i32) -> Self {
+        Self { center, radius }
+    }
+
+    pub fn random(width: i32, height: i32) -> Self {
+        let mut rng = rand::thread_rng();
+        Self::new(Point::random(width, height), rng.gen_range(0..width.min(height) / 2))
+    }
 }
+
+
+impl Drawable for Circle {
+    fn draw(&self, image: &mut raster::Image) {
+        let cx = self.center.0;
+        let cy = self.center.1;
+        let r = self.radius;
+        let color = self.color();
+        
+        // Using Bresenham's circle algorithm
+        let mut x = 0;
+        let mut y = r;
+        let mut d = 3 - 2 * r;
+
+        while y >= x {
+            // Draw eight symmetric points
+            if cx + x >= 0 && cx + x < image.width && cy + y >= 0 && cy + y < image.height {
+                image.set_pixel(cx + x, cy + y, color.clone()).unwrap();
+            }
+            if cx + x >= 0 && cx + x < image.width && cy - y >= 0 && cy - y < image.height {
+                image.set_pixel(cx + x, cy - y, color.clone()).unwrap();
+            }
+            if cx - x >= 0 && cx - x < image.width && cy + y >= 0 && cy + y < image.height {
+                image.set_pixel(cx - x, cy + y, color.clone()).unwrap();
+            }
+            if cx - x >= 0 && cx - x < image.width && cy - y >= 0 && cy - y < image.height {
+                image.set_pixel(cx - x, cy - y, color.clone()).unwrap();
+            }
+            if cx + y >= 0 && cx + y < image.width && cy + x >= 0 && cy + x < image.height {
+                image.set_pixel(cx + y, cy + x, color.clone()).unwrap();
+            }
+            if cx + y >= 0 && cx + y < image.width && cy - x >= 0 && cy - x < image.height {
+                image.set_pixel(cx + y, cy - x, color.clone()).unwrap();
+            }
+            if cx - y >= 0 && cx - y < image.width && cy + x >= 0 && cy + x < image.height {
+                image.set_pixel(cx - y, cy + x, color.clone()).unwrap();
+            }
+            if cx - y >= 0 && cx - y < image.width && cy - x >= 0 && cy - x < image.height {
+                image.set_pixel(cx - y, cy - x, color.clone()).unwrap();
+            }
+
+            if d <= 0 {
+                d += 4 * x + 6;
+            } else {
+                d += 4 * (x - y) + 10;
+                y -= 1;
+            }
+            x += 1;
+        }
+    }
+
+    fn color(&self) -> Color {
+        let mut rng = rand::thread_rng();
+        Color {
+            r: rng.gen_range(0..=255),
+            g: rng.gen_range(0..=255),
+            b: rng.gen_range(0..=255),
+            a: rng.gen_range(100..=255),
+        }
+    }
+}
+
+
+impl Displayable for Circle {
+    fn display(&mut self, x: i32, y: i32, _color: Color) {
+        self.center.0 = x;
+        self.center.1 = y;
+    }
+}
+/*
 
 impl Rectangle {
     pub fn new(_a:Point,_b:Point){}
 }
 
-impl Drawable for Circle {
-    fn draw(&self, _image: &mut raster::Image) {}
-}
 
 impl Drawable for Rectangle {
     fn draw(&self, _image: &mut raster::Image) {}
 }
 
-impl Displayable for Circle {}
 impl Displayable for Rectangle {}
 */
